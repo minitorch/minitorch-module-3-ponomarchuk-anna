@@ -43,7 +43,10 @@ def index_to_position(index: Index, strides: Strides) -> int:
         Position in storage
     """
 
-    raise NotImplementedError("Need to include this file from past assignment.")
+    pos = 0
+    for i, s in zip(index, strides):
+        pos += i * s
+    return int(pos)
 
 
 def to_index(ordinal: int, shape: Shape, out_index: OutIndex) -> None:
@@ -59,7 +62,12 @@ def to_index(ordinal: int, shape: Shape, out_index: OutIndex) -> None:
         out_index : return index corresponding to position.
 
     """
-    raise NotImplementedError("Need to include this file from past assignment.")
+    for i in range(len(shape)):
+        out_index[i] = 0
+    temp = ordinal
+    for i in range(len(shape) - 1, -1, -1):
+        out_index[i] = temp % shape[i]
+        temp = temp // shape[i]
 
 
 def broadcast_index(
@@ -81,7 +89,14 @@ def broadcast_index(
     Returns:
         None
     """
-    raise NotImplementedError("Need to include this file from past assignment.")
+    big_ndim = len(big_shape)
+    small_ndim = len(shape)
+    for i in range(small_ndim):
+        big_i = big_ndim - small_ndim + i
+        if shape[i] == 1:
+            out_index[i] = 0
+        else:
+            out_index[i] = big_index[big_i]
 
 
 def shape_broadcast(shape1: UserShape, shape2: UserShape) -> UserShape:
@@ -98,7 +113,16 @@ def shape_broadcast(shape1: UserShape, shape2: UserShape) -> UserShape:
     Raises:
         IndexingError : if cannot broadcast
     """
-    raise NotImplementedError("Need to include this file from past assignment.")
+    max_len = max(len(shape1), len(shape2))
+    shape1 = (1,) * (max_len - len(shape1)) + shape1
+    shape2 = (1,) * (max_len - len(shape2)) + shape2
+    out_shape = []
+    for s1, s2 in zip(shape1, shape2):
+        if s1 == s2 or s1 == 1 or s2 == 1:
+            out_shape.append(max(s1, s2))
+        else:
+            raise IndexingError(f"Shapes {shape1} and {shape2} are not broadcastable.")
+    return tuple(out_shape)
 
 
 def strides_from_shape(shape: UserShape) -> UserStrides:
@@ -172,6 +196,11 @@ class TensorData:
         if isinstance(index, tuple):
             aindex = array(index)
 
+        # Pretend 0-dim shape is 1-dim shape of singleton
+        shape = self.shape
+        if len(shape) == 0 and len(aindex) != 0:
+            shape = (1,)
+
         # Check for errors
         if aindex.shape[0] != len(self.shape):
             raise IndexingError(f"Index {aindex} must be size of {self.shape}.")
@@ -218,7 +247,9 @@ class TensorData:
             range(len(self.shape))
         ), f"Must give a position to each dimension. Shape: {self.shape} Order: {order}"
 
-        raise NotImplementedError("Need to include this file from past assignment.")
+        new_shape = tuple([self.shape[i] for i in order])
+        new_strides = tuple([self.strides[i] for i in order])
+        return TensorData(self._storage, new_shape, new_strides)
 
     def to_string(self) -> str:
         s = ""
